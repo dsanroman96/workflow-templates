@@ -192,19 +192,7 @@ jobs:
               exit 1
             fi
 
-            python3 - <<'PY' > /tmp/dispatch_payload.json
-import json
-import os
-
-payload = {
-    "event_type": "dependency-released",
-    "client_payload": {
-        "dependency": os.environ["DEPENDENCY_NAME"].strip(),
-        "version": os.environ["VERSION_TAG"].strip(),
-    },
-}
-print(json.dumps(payload))
-PY
+            python3 -c "import json, os, pathlib; payload={'event_type':'dependency-released','client_payload':{'dependency':os.environ['DEPENDENCY_NAME'].strip(),'version':os.environ['VERSION_TAG'].strip()}}; pathlib.Path('/tmp/dispatch_payload.json').write_text(json.dumps(payload), encoding='utf-8')"
 
             echo "Dispatch payload for ${TARGET_REPO}:"
             cat /tmp/dispatch_payload.json
