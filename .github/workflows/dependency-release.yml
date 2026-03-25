@@ -192,17 +192,19 @@ jobs:
               exit 1
             fi
 
-            python3 -c "import json, os, pathlib; payload={'event_type':'dependency-released','client_payload':{'dependency':os.environ['DEPENDENCY_NAME'].strip(),'version':os.environ['VERSION_TAG'].strip()}}; pathlib.Path('/tmp/dispatch_payload.json').write_text(json.dumps(payload), encoding='utf-8')"
+            PAYLOAD="$(jq -cn \
+              --arg dep "${DEPENDENCY_NAME}" \
+              --arg ver "${VERSION_TAG}" \
+              '{event_type:"dependency-released",client_payload:{dependency:($dep|gsub("^\\s+|\\s+$";"")),version:($ver|gsub("^\\s+|\\s+$";""))}}')"
 
-            echo "Dispatch payload for ${TARGET_REPO}:"
-            cat /tmp/dispatch_payload.json
+            echo "Dispatch payload for ${TARGET_REPO}: ${PAYLOAD}"
 
             HTTP_CODE="$(curl -sS -o /tmp/dispatch_response.json -w "%{http_code}" -X POST \
               -H "Accept: application/vnd.github+json" \
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
               "https://api.github.com/repos/${TARGET_REPO}/dispatches" \
-              --data-binary @/tmp/dispatch_payload.json)"
+              --data "${PAYLOAD}")"
 
             echo "Dispatch to ${TARGET_REPO} returned HTTP ${HTTP_CODE}"
             if [ "${HTTP_CODE}" != "204" ]; then
