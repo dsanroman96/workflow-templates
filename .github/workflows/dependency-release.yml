@@ -214,7 +214,6 @@ jobs:
           body: "Automated release."
 
       - name: Notify consumer repositories
-        if: ${{ secrets.CONSUMER_REPOS != '' || secrets.CONSUMER_REPO_PAT != '' }}
         env:
           TARGET_REPOS: ${{ secrets.CONSUMER_REPOS }}
           DISPATCH_TOKEN: ${{ secrets.CONSUMER_REPO_PAT }}
@@ -222,6 +221,11 @@ jobs:
           VERSION_TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
+
+          if [ -z "${TARGET_REPOS}" ] && [ -z "${DISPATCH_TOKEN}" ]; then
+            echo "No consumer notification secrets configured; skipping notifications."
+            exit 0
+          fi
 
           if [ -z "${TARGET_REPOS}" ] || [ -z "${DISPATCH_TOKEN}" ]; then
             echo "Both CONSUMER_REPOS and CONSUMER_REPO_PAT are required when notifications are enabled."
