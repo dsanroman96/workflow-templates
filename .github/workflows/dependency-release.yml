@@ -192,11 +192,13 @@ jobs:
               exit 1
             fi
 
+            PAYLOAD="$(python3 -c 'import json, os; print(json.dumps({"event_type":"dependency-released","client_payload":{"dependency":os.environ["DEPENDENCY_NAME"].strip(),"version":os.environ["VERSION_TAG"].strip()}}))')"
+
             HTTP_CODE="$(curl -sS -o /tmp/dispatch_response.json -w "%{http_code}" -X POST \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
               "https://api.github.com/repos/${TARGET_REPO}/dispatches" \
-              -d "{\"event_type\":\"dependency-released\",\"client_payload\":{\"dependency\":\"${DEPENDENCY_NAME}\",\"version\":\"${VERSION_TAG}\"}}")"
+              -d "${PAYLOAD}")"
 
             echo "Dispatch to ${TARGET_REPO} returned HTTP ${HTTP_CODE}"
             if [ "${HTTP_CODE}" != "204" ]; then
