@@ -33,6 +33,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Checkout workflow templates repo
+        uses: actions/checkout@v4
+        with:
+          repository: dsanroman96/workflow-templates
+          ref: main
+          path: .workflow-templates
+
       - name: Configure git user
         run: |
           git config user.name "github-actions[bot]"
@@ -101,33 +108,7 @@ jobs:
               ;;
             python)
               TARGET_PATH="$(resolve_path "${VERSION_FILE_PATH}" "pyproject.toml")"
-              CURRENT_VERSION="$(TARGET_PATH="${TARGET_PATH}" python3 - <<'PY'
-                import os
-                import pathlib
-                import re
-                import sys
-
-                target_path = os.environ["TARGET_PATH"]
-                content = pathlib.Path(target_path).read_text(encoding="utf-8")
-                section = None
-                version = None
-
-                for line in content.splitlines():
-                    stripped = line.strip()
-                    if stripped.startswith("[") and stripped.endswith("]"):
-                        section = stripped.strip("[]")
-                    m = re.match(r'version\s*=\s*["\']([^"\']+)["\']', stripped)
-                    if m and section in ("project", "tool.poetry"):
-                        version = m.group(1)
-                        break
-
-                if not version:
-                    print(f"Could not find version in [project] or [tool.poetry] section of {target_path}", file=sys.stderr)
-                    sys.exit(1)
-
-                print(version)
-          PY
-              )"
+              CURRENT_VERSION="$(python3 .workflow-templates/scripts/bump_pyproject.py read --file "${TARGET_PATH}")"
               CHANGED_FILES="${TARGET_PATH}"
               ;;
             *)
@@ -152,40 +133,7 @@ jobs:
               TARGET_PATH="${TARGET_PATH}" NEXT_VERSION="${NEXT_VERSION}" node -e "const fs=require('fs'); const p=process.env.TARGET_PATH; const data=JSON.parse(fs.readFileSync(p,'utf8')); data.version=process.env.NEXT_VERSION; fs.writeFileSync(p, JSON.stringify(data, null, 2) + '\n');"
               ;;
             python)
-              TARGET_PATH="${TARGET_PATH}" NEXT_VERSION="${NEXT_VERSION}" python3 - <<'PY'
-                import os
-                import pathlib
-                import re
-                import sys
-
-                path = pathlib.Path(os.environ["TARGET_PATH"])
-                content = path.read_text(encoding="utf-8")
-                target = os.environ["NEXT_VERSION"]
-
-                section = None
-                found_section = False
-                replaced = False
-                lines = []
-
-                for line in content.splitlines(keepends=True):
-                    stripped = line.strip()
-                    if stripped.startswith("[") and stripped.endswith("]"):
-                        section = stripped.strip("[]")
-                    if section in ("project", "tool.poetry"):
-                        found_section = True
-                        m = re.match(r'^(\s*version\s*=\s*["\'])([^"\']+)(["\']\s*)$', line.rstrip("\n"))
-                        if m and not replaced:
-                            lines.append(f"{m.group(1)}{target}{m.group(3)}\n")
-                            replaced = True
-                            continue
-                    lines.append(line)
-
-                if not found_section or not replaced:
-                    print(f"Could not update version in [project] or [tool.poetry] section of {path}", file=sys.stderr)
-                    sys.exit(1)
-
-                path.write_text("".join(lines), encoding="utf-8")
-          PY
+              python3 .workflow-templates/scripts/bump_pyproject.py write --file "${TARGET_PATH}" --version "${NEXT_VERSION}"
               ;;
           esac
 
