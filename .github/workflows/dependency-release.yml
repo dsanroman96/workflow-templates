@@ -17,9 +17,9 @@ on:
         type: string
     secrets:
       CONSUMER_REPOS:
-        required: true
+        required: false
       CONSUMER_REPO_PAT:
-        required: true
+        required: false
 
 permissions:
   contents: write
@@ -214,6 +214,7 @@ jobs:
           body: "Automated release."
 
       - name: Notify consumer repositories
+        if: ${{ secrets.CONSUMER_REPOS != '' || secrets.CONSUMER_REPO_PAT != '' }}
         env:
           TARGET_REPOS: ${{ secrets.CONSUMER_REPOS }}
           DISPATCH_TOKEN: ${{ secrets.CONSUMER_REPO_PAT }}
@@ -222,16 +223,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ -z "${DISPATCH_TOKEN}" ]; then
-            echo "Missing required secret: CONSUMER_REPO_PAT"
+          if [ -z "${TARGET_REPOS}" ] || [ -z "${DISPATCH_TOKEN}" ]; then
+            echo "Both CONSUMER_REPOS and CONSUMER_REPO_PAT are required when notifications are enabled."
             exit 1
           fi
 
           REPO_LIST="${TARGET_REPOS}"
-          if [ -z "${REPO_LIST}" ]; then
-            echo "Missing required secret: CONSUMER_REPOS"
-            exit 1
-          fi
 
           REPO_LIST="$(printf '%s' "${REPO_LIST}" | tr ',' '\n')"
           while IFS= read -r TARGET_REPO; do
