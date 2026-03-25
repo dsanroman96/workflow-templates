@@ -192,9 +192,16 @@ jobs:
               exit 1
             fi
 
-            curl --fail-with-body -X POST \
+            HTTP_CODE="$(curl -sS -o /tmp/dispatch_response.json -w "%{http_code}" -X POST \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
               "https://api.github.com/repos/${TARGET_REPO}/dispatches" \
-              -d "{\"event_type\":\"dependency-released\",\"client_payload\":{\"dependency\":\"${DEPENDENCY_NAME}\",\"version\":\"${VERSION_TAG}\"}}"
+              -d "{\"event_type\":\"dependency-released\",\"client_payload\":{\"dependency\":\"${DEPENDENCY_NAME}\",\"version\":\"${VERSION_TAG}\"}}")"
+
+            echo "Dispatch to ${TARGET_REPO} returned HTTP ${HTTP_CODE}"
+            if [ "${HTTP_CODE}" != "204" ]; then
+              echo "Dispatch failed for ${TARGET_REPO}. Response body:"
+              cat /tmp/dispatch_response.json
+              exit 1
+            fi
           done <<< "${REPO_LIST}"
