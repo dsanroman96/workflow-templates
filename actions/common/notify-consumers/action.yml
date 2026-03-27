@@ -15,6 +15,10 @@ inputs:
   version_tag:
     description: "Released tag in vX.Y.Z format"
     required: true
+  open_pr:
+    description: "Whether consumers should open pull requests"
+    required: false
+    default: "false"
 runs:
   using: "composite"
   steps:
@@ -25,6 +29,7 @@ runs:
         DISPATCH_TOKEN: ${{ inputs.dispatch_token }}
         DEPENDENCY_NAME: ${{ inputs.dependency_name }}
         VERSION_TAG: ${{ inputs.version_tag }}
+        OPEN_PR: ${{ inputs.open_pr }}
       run: |
         set -euo pipefail
 
@@ -49,10 +54,17 @@ runs:
             exit 1
           fi
 
+          if [ "${OPEN_PR}" = "true" ]; then
+            OPEN_PR_JSON=true
+          else
+            OPEN_PR_JSON=false
+          fi
+
           PAYLOAD="$(jq -cn \
             --arg dep "${DEPENDENCY_NAME}" \
             --arg ver "${VERSION_TAG}" \
-            '{event_type:"dependency-released",client_payload:{dependency:($dep|gsub("^\\s+|\\s+$";"")),version:($ver|gsub("^\\s+|\\s+$";""))}}')"
+            --argjson open_pr "${OPEN_PR_JSON}" \
+            '{event_type:"dependency-released",client_payload:{dependency:($dep|gsub("^\\s+|\\s+$";"")),version:($ver|gsub("^\\s+|\\s+$";"")),open_pr:$open_pr}}')"
 
           echo "Dispatch payload for ${TARGET_REPO}: ${PAYLOAD}"
 

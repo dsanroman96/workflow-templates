@@ -15,6 +15,11 @@ on:
         description: "Optional custom version file path"
         required: false
         type: string
+      open_pr:
+        description: "Request consumers to open PRs"
+        required: false
+        type: boolean
+        default: false
     secrets:
       CONSUMER_REPOS:
         required: false
@@ -80,3 +85,4 @@ jobs:
           dispatch_token: ${{ secrets.CONSUMER_REPO_PAT }}
           dependency_name: ${{ github.event.repository.name }}
           version_tag: ${{ steps.bumped.outputs.tag }}
+          open_pr: ${{ inputs.open_pr }}
