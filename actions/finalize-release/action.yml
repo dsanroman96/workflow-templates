@@ -1,0 +1,41 @@
+name: "Finalize release"
+description: "Commits version bump, pushes tag, and creates GitHub release"
+inputs:
+  changed_files:
+    description: "Files to add and commit"
+    required: true
+  next_version:
+    description: "Next version in X.Y.Z format"
+    required: true
+  tag:
+    description: "Tag in vX.Y.Z format"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Commit version bump
+      shell: bash
+      env:
+        CHANGED_FILES: ${{ inputs.changed_files }}
+        NEXT_VERSION: ${{ inputs.next_version }}
+      run: |
+        set -euo pipefail
+        git add ${CHANGED_FILES}
+        git commit -m "chore: release v${NEXT_VERSION}"
+
+    - name: Create and push tag
+      shell: bash
+      env:
+        TAG: ${{ inputs.tag }}
+      run: |
+        set -euo pipefail
+        git tag "${TAG}"
+        git push origin HEAD
+        git push origin "${TAG}"
+
+    - name: Publish GitHub release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ inputs.tag }}
+        name: ${{ inputs.tag }}
+        body: "Automated release."

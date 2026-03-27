@@ -1,0 +1,56 @@
+name: "Calculate next semantic version"
+description: "Computes next version and tag from current version and bump type"
+inputs:
+  current_version:
+    description: "Current semantic version (X.Y.Z or vX.Y.Z)"
+    required: true
+  bump:
+    description: "Version bump type: patch, minor, or major"
+    required: true
+outputs:
+  next_version:
+    description: "Next semantic version in X.Y.Z format"
+    value: ${{ steps.calc.outputs.next_version }}
+  tag:
+    description: "Tag in vX.Y.Z format"
+    value: ${{ steps.calc.outputs.tag }}
+runs:
+  using: "composite"
+  steps:
+    - id: calc
+      shell: bash
+      env:
+        CURRENT_VERSION: ${{ inputs.current_version }}
+        BUMP: ${{ inputs.bump }}
+      run: |
+        set -euo pipefail
+
+        version="${CURRENT_VERSION#v}"
+        if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "Current version must be semantic version X.Y.Z. Got: ${CURRENT_VERSION}"
+          exit 1
+        fi
+
+        IFS='.' read -r major minor patch <<< "${version}"
+        case "${BUMP}" in
+          major)
+            major=$((major + 1))
+            minor=0
+            patch=0
+            ;;
+          minor)
+            minor=$((minor + 1))
+            patch=0
+            ;;
+          patch)
+            patch=$((patch + 1))
+            ;;
+          *)
+            echo "Unsupported bump type: ${BUMP}"
+            exit 1
+            ;;
+        esac
+
+        next_version="${major}.${minor}.${patch}"
+        echo "next_version=${next_version}" >> "${GITHUB_OUTPUT}"
+        echo "tag=v${next_version}" >> "${GITHUB_OUTPUT}"

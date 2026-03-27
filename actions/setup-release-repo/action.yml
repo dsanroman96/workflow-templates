@@ -1,0 +1,15 @@
+name: "Setup release repository"
+description: "Checks out repository and configures git bot identity"
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Configure git user
+      shell: bash
+      run: |
+        set -euo pipefail
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

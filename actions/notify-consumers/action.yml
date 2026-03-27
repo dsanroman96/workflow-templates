@@ -1,0 +1,72 @@
+name: "Notify consumer repositories"
+description: "Dispatches dependency release events to configured consumer repositories"
+inputs:
+  target_repos:
+    description: "Comma-separated owner/repo list"
+    required: false
+    default: ""
+  dispatch_token:
+    description: "PAT used to dispatch to target repositories"
+    required: false
+    default: ""
+  dependency_name:
+    description: "Dependency repository name"
+    required: true
+  version_tag:
+    description: "Released tag in vX.Y.Z format"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Dispatch update events
+      shell: bash
+      env:
+        TARGET_REPOS: ${{ inputs.target_repos }}
+        DISPATCH_TOKEN: ${{ inputs.dispatch_token }}
+        DEPENDENCY_NAME: ${{ inputs.dependency_name }}
+        VERSION_TAG: ${{ inputs.version_tag }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "${TARGET_REPOS}" ] && [ -z "${DISPATCH_TOKEN}" ]; then
+          echo "No consumer notification secrets configured; skipping notifications."
+          exit 0
+        fi
+
+        if [ -z "${TARGET_REPOS}" ] || [ -z "${DISPATCH_TOKEN}" ]; then
+          echo "Both CONSUMER_REPOS and CONSUMER_REPO_PAT are required when notifications are enabled."
+          exit 1
+        fi
+
+        REPO_LIST="${TARGET_REPOS}"
+        REPO_LIST="$(printf '%s' "${REPO_LIST}" | tr ',' '\n')"
+        while IFS= read -r TARGET_REPO; do
+          TARGET_REPO="$(echo "${TARGET_REPO}" | xargs)"
+          [ -z "${TARGET_REPO}" ] && continue
+
+          if [[ ! "${TARGET_REPO}" =~ ^[^/]+/[^/]+$ ]]; then
+            echo "Invalid repository format: ${TARGET_REPO}"
+            exit 1
+          fi
+
+          PAYLOAD="$(jq -cn \
+            --arg dep "${DEPENDENCY_NAME}" \
+            --arg ver "${VERSION_TAG}" \
+            '{event_type:"dependency-released",client_payload:{dependency:($dep|gsub("^\\s+|\\s+$";"")),version:($ver|gsub("^\\s+|\\s+$";""))}}')"
+
+          echo "Dispatch payload for ${TARGET_REPO}: ${PAYLOAD}"
+
+          HTTP_CODE="$(curl -sS -o /tmp/dispatch_response.json -w "%{http_code}" -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
+            "https://api.github.com/repos/${TARGET_REPO}/dispatches" \
+            --data "${PAYLOAD}")"
+
+          echo "Dispatch to ${TARGET_REPO} returned HTTP ${HTTP_CODE}"
+          if [ "${HTTP_CODE}" != "204" ]; then
+            echo "Dispatch failed for ${TARGET_REPO}. Response body:"
+            cat /tmp/dispatch_response.json
+            exit 1
+          fi
+        done <<< "${REPO_LIST}"
