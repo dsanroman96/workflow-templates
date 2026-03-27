@@ -27,7 +27,7 @@ permissions:
 jobs:
   release-generic:
     if: ${{ inputs.project_type == 'generic' }}
-    uses: ./workflows/dependency-release-generic.yml
+    uses: ./.github/workflows/dependency-release-generic.yml
     with:
       bump: ${{ inputs.bump }}
       version_file_path: ${{ inputs.version_file_path }}
@@ -35,7 +35,7 @@ jobs:
 
   release-typescript:
     if: ${{ inputs.project_type == 'typescript' }}
-    uses: ./workflows/dependency-release-typescript.yml
+    uses: ./.github/workflows/dependency-release-typescript.yml
     with:
       bump: ${{ inputs.bump }}
       version_file_path: ${{ inputs.version_file_path }}

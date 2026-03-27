@@ -1,12 +1,8 @@
 name: "Setup release repository"
-description: "Checks out repository and configures git bot identity"
+description: "Configures git bot identity"
 runs:
   using: "composite"
   steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
     - name: Configure git user
       shell: bash
       run: |
