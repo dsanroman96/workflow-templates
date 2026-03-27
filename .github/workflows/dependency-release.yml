@@ -25,28 +25,89 @@ permissions:
   contents: write
 
 jobs:
-  release-generic:
-    if: ${{ inputs.project_type == 'generic' }}
-    uses: ./.github/workflows/dependency-release-generic.yml
-    with:
-      bump: ${{ inputs.bump }}
-      version_file_path: ${{ inputs.version_file_path }}
-    secrets: inherit
-
-  release-typescript:
-    if: ${{ inputs.project_type == 'typescript' }}
-    uses: ./.github/workflows/dependency-release-typescript.yml
-    with:
-      bump: ${{ inputs.bump }}
-      version_file_path: ${{ inputs.version_file_path }}
-    secrets: inherit
-
-  unsupported-project-type:
-    if: ${{ inputs.project_type != 'generic' && inputs.project_type != 'typescript' }}
+  release:
     runs-on: ubuntu-latest
     steps:
-      - name: Fail for unsupported project type
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup release repository
+        uses: dsanroman96/workflow-templates/actions/setup-release-repo@main
+
+      - name: Resolve target path and current version
+        id: version
+        env:
+          PROJECT_TYPE: ${{ inputs.project_type }}
+          VERSION_FILE_PATH: ${{ inputs.version_file_path }}
         run: |
-          echo "Unsupported project_type: ${{ inputs.project_type }}"
-          echo "Supported values: generic, typescript"
-          exit 1
+          set -euo pipefail
+
+          resolve_path() {
+            local provided="$1"
+            local default_path="$2"
+            if [ -n "${provided}" ]; then
+              echo "${provided}"
+            else
+              echo "${default_path}"
+            fi
+          }
+
+          case "${PROJECT_TYPE}" in
+            generic)
+              TARGET_PATH="$(resolve_path "${VERSION_FILE_PATH}" "VERSION")"
+              CURRENT_VERSION="$(cat "${TARGET_PATH}")"
+              ;;
+            typescript)
+              TARGET_PATH="$(resolve_path "${VERSION_FILE_PATH}" "package.json")"
+              CURRENT_VERSION="$(node -p "require('./${TARGET_PATH}').version")"
+              ;;
+            *)
+              echo "Unsupported project_type: ${PROJECT_TYPE}"
+              echo "Supported values: generic, typescript"
+              exit 1
+              ;;
+          esac
+
+          echo "target_path=${TARGET_PATH}" >> "${GITHUB_OUTPUT}"
+          echo "current_version=${CURRENT_VERSION}" >> "${GITHUB_OUTPUT}"
+
+      - name: Calculate bumped version
+        id: bumped
+        uses: dsanroman96/workflow-templates/actions/calc-next-version@main
+        with:
+          current_version: ${{ steps.version.outputs.current_version }}
+          bump: ${{ inputs.bump }}
+
+      - name: Apply version bump
+        env:
+          PROJECT_TYPE: ${{ inputs.project_type }}
+          TARGET_PATH: ${{ steps.version.outputs.target_path }}
+          NEXT_VERSION: ${{ steps.bumped.outputs.next_version }}
+        run: |
+          set -euo pipefail
+
+          case "${PROJECT_TYPE}" in
+            generic)
+              echo "${NEXT_VERSION}" > "${TARGET_PATH}"
+              ;;
+            typescript)
+              TARGET_PATH="${TARGET_PATH}" NEXT_VERSION="${NEXT_VERSION}" node -e "const fs=require('fs'); const p=process.env.TARGET_PATH; const data=JSON.parse(fs.readFileSync(p,'utf8')); data.version=process.env.NEXT_VERSION; fs.writeFileSync(p, JSON.stringify(data, null, 2) + '\n');"
+              ;;
+          esac
+
+      - name: Finalize release
+        uses: dsanroman96/workflow-templates/actions/finalize-release@main
+        with:
+          changed_files: ${{ steps.version.outputs.target_path }}
+          next_version: ${{ steps.bumped.outputs.next_version }}
+          tag: ${{ steps.bumped.outputs.tag }}
+
+      - name: Notify consumer repositories
+        uses: dsanroman96/workflow-templates/actions/notify-consumers@main
+        with:
+          target_repos: ${{ secrets.CONSUMER_REPOS }}
+          dispatch_token: ${{ secrets.CONSUMER_REPO_PAT }}
+          dependency_name: ${{ github.event.repository.name }}
+          version_tag: ${{ steps.bumped.outputs.tag }}
