@@ -80,27 +80,26 @@ jobs:
           current_version: ${{ steps.version.outputs.current_version }}
           bump: ${{ inputs.bump }}
 
-      - name: Apply version bump
-        env:
-          PROJECT_TYPE: ${{ inputs.project_type }}
-          TARGET_PATH: ${{ steps.version.outputs.target_path }}
-          NEXT_VERSION: ${{ steps.bumped.outputs.next_version }}
-        run: |
-          set -euo pipefail
+      - name: Apply generic release logic
+        if: ${{ inputs.project_type == 'generic' }}
+        id: generic_release
+        uses: dsanroman96/workflow-templates/actions/release-generic@main
+        with:
+          target_path: ${{ steps.version.outputs.target_path }}
+          next_version: ${{ steps.bumped.outputs.next_version }}
 
-          case "${PROJECT_TYPE}" in
-            generic)
-              echo "${NEXT_VERSION}" > "${TARGET_PATH}"
-              ;;
-            typescript)
-              TARGET_PATH="${TARGET_PATH}" NEXT_VERSION="${NEXT_VERSION}" node -e "const fs=require('fs'); const p=process.env.TARGET_PATH; const data=JSON.parse(fs.readFileSync(p,'utf8')); data.version=process.env.NEXT_VERSION; fs.writeFileSync(p, JSON.stringify(data, null, 2) + '\n');"
-              ;;
-          esac
+      - name: Apply TypeScript release logic
+        if: ${{ inputs.project_type == 'typescript' }}
+        id: typescript_release
+        uses: dsanroman96/workflow-templates/actions/release-typescript@main
+        with:
+          target_path: ${{ steps.version.outputs.target_path }}
+          next_version: ${{ steps.bumped.outputs.next_version }}
 
       - name: Finalize release
         uses: dsanroman96/workflow-templates/actions/finalize-release@main
         with:
-          changed_files: ${{ steps.version.outputs.target_path }}
+          changed_files: ${{ inputs.project_type == 'typescript' && steps.typescript_release.outputs.changed_files || steps.generic_release.outputs.changed_files }}
           next_version: ${{ steps.bumped.outputs.next_version }}
           tag: ${{ steps.bumped.outputs.tag }}
 

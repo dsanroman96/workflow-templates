@@ -1,0 +1,32 @@
+name: "Release generic project"
+description: "Applies generic version bump and returns changed files"
+inputs:
+  target_path:
+    description: "Path to generic version file"
+    required: true
+  next_version:
+    description: "Next version in X.Y.Z format"
+    required: true
+outputs:
+  changed_files:
+    description: "Files changed by this release logic"
+    value: ${{ steps.result.outputs.changed_files }}
+runs:
+  using: "composite"
+  steps:
+    - name: Write next version
+      shell: bash
+      env:
+        TARGET_PATH: ${{ inputs.target_path }}
+        NEXT_VERSION: ${{ inputs.next_version }}
+      run: |
+        set -euo pipefail
+        echo "${NEXT_VERSION}" > "${TARGET_PATH}"
+
+    - id: result
+      shell: bash
+      env:
+        TARGET_PATH: ${{ inputs.target_path }}
+      run: |
+        set -euo pipefail
+        echo "changed_files=${TARGET_PATH}" >> "${GITHUB_OUTPUT}"

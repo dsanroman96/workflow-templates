@@ -1,0 +1,42 @@
+name: "Release TypeScript project"
+description: "Applies TypeScript version bump, updates Bun lockfile, and returns changed files"
+inputs:
+  target_path:
+    description: "Path to package.json"
+    required: true
+  next_version:
+    description: "Next version in X.Y.Z format"
+    required: true
+outputs:
+  changed_files:
+    description: "Files changed by this release logic"
+    value: ${{ steps.result.outputs.changed_files }}
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+
+    - name: Write next version and lockfile
+      shell: bash
+      env:
+        TARGET_PATH: ${{ inputs.target_path }}
+        NEXT_VERSION: ${{ inputs.next_version }}
+      run: |
+        set -euo pipefail
+        TARGET_PATH="${TARGET_PATH}" NEXT_VERSION="${NEXT_VERSION}" node -e "const fs=require('fs'); const p=process.env.TARGET_PATH; const data=JSON.parse(fs.readFileSync(p,'utf8')); data.version=process.env.NEXT_VERSION; fs.writeFileSync(p, JSON.stringify(data, null, 2) + '\n');"
+        bun install --lockfile-only
+
+    - id: result
+      shell: bash
+      env:
+        TARGET_PATH: ${{ inputs.target_path }}
+      run: |
+        set -euo pipefail
+        files="${TARGET_PATH}"
+        if [ -f "bun.lock" ]; then
+          files="${files} bun.lock"
+        elif [ -f "bun.lockb" ]; then
+          files="${files} bun.lockb"
+        fi
+        echo "changed_files=${files}" >> "${GITHUB_OUTPUT}"
