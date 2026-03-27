@@ -13,15 +13,12 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Commit version bump
-      shell: bash
-      env:
-        CHANGED_FILES: ${{ inputs.changed_files }}
-        NEXT_VERSION: ${{ inputs.next_version }}
-      run: |
-        set -euo pipefail
-        git add ${CHANGED_FILES}
-        git commit -m "chore: release v${NEXT_VERSION}"
+    - name: Commit and push release changes
+      uses: dsanroman96/workflow-templates/actions/common/commit-and-push-if-changed@main
+      with:
+        files: ${{ inputs.changed_files }}
+        commit_message: "chore: release v${{ inputs.next_version }}"
+        fail_when_no_changes: "true"
 
     - name: Create and push tag
       shell: bash

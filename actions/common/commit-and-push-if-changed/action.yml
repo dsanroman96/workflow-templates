@@ -1,0 +1,43 @@
+name: "Commit and push if changed"
+description: "Stages files, commits, and pushes HEAD only when there are staged changes"
+inputs:
+  files:
+    description: "Space-separated files to stage"
+    required: true
+  commit_message:
+    description: "Commit message"
+    required: true
+  fail_when_no_changes:
+    description: "Fail when nothing changed (true/false)"
+    required: false
+    default: "true"
+outputs:
+  committed:
+    description: "Whether a commit was created"
+    value: ${{ steps.commit.outputs.committed }}
+runs:
+  using: "composite"
+  steps:
+    - id: commit
+      shell: bash
+      env:
+        FILES: ${{ inputs.files }}
+        COMMIT_MESSAGE: ${{ inputs.commit_message }}
+        FAIL_WHEN_NO_CHANGES: ${{ inputs.fail_when_no_changes }}
+      run: |
+        set -euo pipefail
+
+        git add ${FILES}
+
+        if git diff --cached --quiet; then
+          if [ "${FAIL_WHEN_NO_CHANGES}" = "true" ]; then
+            echo "No changes detected in staged files: ${FILES}"
+            exit 1
+          fi
+          echo "committed=false" >> "${GITHUB_OUTPUT}"
+          exit 0
+        fi
+
+        git commit -m "${COMMIT_MESSAGE}"
+        git push origin HEAD
+        echo "committed=true" >> "${GITHUB_OUTPUT}"

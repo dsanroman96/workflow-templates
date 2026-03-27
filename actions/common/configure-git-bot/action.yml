@@ -1,5 +1,5 @@
-name: "Setup release repository"
-description: "Configures git bot identity"
+name: "Configure git bot"
+description: "Configures github-actions bot identity for commits"
 runs:
   using: "composite"
   steps:

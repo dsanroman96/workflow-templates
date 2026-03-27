@@ -33,49 +33,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup release repository
-        uses: dsanroman96/workflow-templates/actions/setup-release-repo@main
+      - name: Configure git bot
+        uses: dsanroman96/workflow-templates/actions/common/configure-git-bot@main
 
       - name: Resolve target path and current version
         id: version
-        env:
-          PROJECT_TYPE: ${{ inputs.project_type }}
-          VERSION_FILE_PATH: ${{ inputs.version_file_path }}
-        run: |
-          set -euo pipefail
-
-          resolve_path() {
-            local provided="$1"
-            local default_path="$2"
-            if [ -n "${provided}" ]; then
-              echo "${provided}"
-            else
-              echo "${default_path}"
-            fi
-          }
-
-          case "${PROJECT_TYPE}" in
-            generic)
-              TARGET_PATH="$(resolve_path "${VERSION_FILE_PATH}" "VERSION")"
-              CURRENT_VERSION="$(cat "${TARGET_PATH}")"
-              ;;
-            typescript)
-              TARGET_PATH="$(resolve_path "${VERSION_FILE_PATH}" "package.json")"
-              CURRENT_VERSION="$(node -p "require('./${TARGET_PATH}').version")"
-              ;;
-            *)
-              echo "Unsupported project_type: ${PROJECT_TYPE}"
-              echo "Supported values: generic, typescript"
-              exit 1
-              ;;
-          esac
-
-          echo "target_path=${TARGET_PATH}" >> "${GITHUB_OUTPUT}"
-          echo "current_version=${CURRENT_VERSION}" >> "${GITHUB_OUTPUT}"
+        uses: dsanroman96/workflow-templates/actions/common/resolve-project-version@main
+        with:
+          project_type: ${{ inputs.project_type }}
+          version_file_path: ${{ inputs.version_file_path }}
 
       - name: Calculate bumped version
         id: bumped
-        uses: dsanroman96/workflow-templates/actions/calc-next-version@main
+        uses: dsanroman96/workflow-templates/actions/common/calc-next-version@main
         with:
           current_version: ${{ steps.version.outputs.current_version }}
           bump: ${{ inputs.bump }}
@@ -97,14 +67,14 @@ jobs:
           next_version: ${{ steps.bumped.outputs.next_version }}
 
       - name: Finalize release
-        uses: dsanroman96/workflow-templates/actions/finalize-release@main
+        uses: dsanroman96/workflow-templates/actions/common/finalize-release@main
         with:
           changed_files: ${{ inputs.project_type == 'typescript' && steps.typescript_release.outputs.changed_files || steps.generic_release.outputs.changed_files }}
           next_version: ${{ steps.bumped.outputs.next_version }}
           tag: ${{ steps.bumped.outputs.tag }}
 
       - name: Notify consumer repositories
-        uses: dsanroman96/workflow-templates/actions/notify-consumers@main
+        uses: dsanroman96/workflow-templates/actions/common/notify-consumers@main
         with:
           target_repos: ${{ secrets.CONSUMER_REPOS }}
           dispatch_token: ${{ secrets.CONSUMER_REPO_PAT }}

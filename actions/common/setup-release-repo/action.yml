@@ -1,0 +1,7 @@
+name: "Setup release repository"
+description: "Configures git bot identity"
+runs:
+  using: "composite"
+  steps:
+    - name: Configure git bot
+      uses: dsanroman96/workflow-templates/actions/common/configure-git-bot@main
