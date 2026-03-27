@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup release repository
-        uses: ./actions/setup-release-repo
+        uses: dsanroman96/workflow-templates/actions/setup-release-repo@main
 
       - name: Calculate next version
         id: version
@@ -56,7 +56,7 @@ jobs:
 
       - name: Calculate bumped version
         id: bumped
-        uses: ./actions/calc-next-version
+        uses: dsanroman96/workflow-templates/actions/calc-next-version@main
         with:
           current_version: ${{ steps.version.outputs.current_version }}
           bump: ${{ inputs.bump }}
@@ -67,14 +67,14 @@ jobs:
           TARGET_PATH="${{ steps.version.outputs.target_path }}" NEXT_VERSION="${{ steps.bumped.outputs.next_version }}" node -e "const fs=require('fs'); const p=process.env.TARGET_PATH; const data=JSON.parse(fs.readFileSync(p,'utf8')); data.version=process.env.NEXT_VERSION; fs.writeFileSync(p, JSON.stringify(data, null, 2) + '\n');"
 
       - name: Finalize release
-        uses: ./actions/finalize-release
+        uses: dsanroman96/workflow-templates/actions/finalize-release@main
         with:
           changed_files: ${{ steps.version.outputs.target_path }}
           next_version: ${{ steps.bumped.outputs.next_version }}
           tag: ${{ steps.bumped.outputs.tag }}
 
       - name: Notify consumer repositories
-        uses: ./actions/notify-consumers
+        uses: dsanroman96/workflow-templates/actions/notify-consumers@main
         with:
           target_repos: ${{ secrets.CONSUMER_REPOS }}
           dispatch_token: ${{ secrets.CONSUMER_REPO_PAT }}
