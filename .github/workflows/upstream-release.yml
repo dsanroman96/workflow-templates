@@ -19,7 +19,7 @@ on:
         description: "Request downstream repositories to open PRs"
         required: false
         type: boolean
-        default: false
+        default: true
       downstream_repos:
         description: "Comma-separated owner/repo list of downstream projects"
         required: false

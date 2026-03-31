@@ -19,7 +19,7 @@ on:
         description: "When true, open a PR instead of pushing directly to the default branch."
         required: false
         type: boolean
-        default: false
+        default: true
       dependency_owner:
         description: "Owner/organization of upstream dependency repositories. Defaults to current repo owner when empty."
         required: false
