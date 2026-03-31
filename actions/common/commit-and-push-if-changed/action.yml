@@ -1,19 +1,19 @@
-name: "Commit and push if changed"
-description: "Stages files, commits, and pushes HEAD only when there are staged changes"
+name: "Commit And Push If Changed"
+description: "Stages selected files, creates a commit only when the index changed, and pushes the current HEAD branch."
 inputs:
   files:
-    description: "Space-separated files to stage"
+    description: "Space-separated list of file paths to stage with git add."
     required: true
   commit_message:
-    description: "Commit message"
+    description: "Commit message used when staged changes exist."
     required: true
   fail_when_no_changes:
-    description: "Fail when nothing changed (true/false)"
+    description: "When true, fail if staging produces no diff; when false, exit successfully without committing."
     required: false
     default: "true"
 outputs:
   committed:
-    description: "Whether a commit was created"
+    description: "Whether this action created and pushed a commit (true/false)."
     value: ${{ steps.commit.outputs.committed }}
 runs:
   using: "composite"

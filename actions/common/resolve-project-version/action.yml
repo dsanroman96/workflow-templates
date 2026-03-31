@@ -1,19 +1,19 @@
 name: "Resolve project version"
-description: "Resolves target version file and reads current version by project type"
+description: "Resolves the version source file path and reads the current project version based on project type."
 inputs:
   project_type:
-    description: "Project type: generic or typescript"
+    description: "Release strategy to use when resolving version source (supported: generic, typescript)."
     required: true
   version_file_path:
-    description: "Optional custom version file path"
+    description: "Optional override for the version file path (defaults to VERSION or package.json by type)."
     required: false
     default: ""
 outputs:
   target_path:
-    description: "Resolved target file path"
+    description: "Resolved version file path used by subsequent release actions."
     value: ${{ steps.resolve.outputs.target_path }}
   current_version:
-    description: "Current version string"
+    description: "Current version read from the resolved file."
     value: ${{ steps.resolve.outputs.current_version }}
 runs:
   using: "composite"

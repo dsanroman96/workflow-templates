@@ -1,15 +1,15 @@
 name: "Release TypeScript project"
-description: "Applies TypeScript version bump, updates Bun lockfile, and returns changed files"
+description: "Updates package.json version for TypeScript projects, refreshes Bun lockfile, and reports changed files."
 inputs:
   target_path:
-    description: "Path to package.json"
+    description: "Path to the package manifest file that contains the version field (typically package.json)."
     required: true
   next_version:
-    description: "Next version in X.Y.Z format"
+    description: "Next release version to write, in X.Y.Z format."
     required: true
 outputs:
   changed_files:
-    description: "Files changed by this release logic"
+    description: "Space-separated file list to commit after applying TypeScript release changes."
     value: ${{ steps.result.outputs.changed_files }}
 runs:
   using: "composite"

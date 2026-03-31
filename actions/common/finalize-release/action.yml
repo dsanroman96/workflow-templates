@@ -1,14 +1,14 @@
 name: "Finalize release"
-description: "Commits version bump, pushes tag, and creates GitHub release"
+description: "Commits release file changes, pushes the release tag, and publishes a GitHub Release entry."
 inputs:
   changed_files:
-    description: "Files to add and commit"
+    description: "Space-separated list of files produced by release logic that must be committed."
     required: true
   next_version:
-    description: "Next version in X.Y.Z format"
+    description: "Release version in X.Y.Z format, used in the release commit message."
     required: true
   tag:
-    description: "Tag in vX.Y.Z format"
+    description: "Release tag in vX.Y.Z format to create and publish."
     required: true
 runs:
   using: "composite"

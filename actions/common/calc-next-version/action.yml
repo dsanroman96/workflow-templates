@@ -1,18 +1,18 @@
-name: "Calculate next semantic version"
-description: "Computes next version and tag from current version and bump type"
+name: "Calculate Next Semantic Version"
+description: "Validates semantic version input and bump type, then outputs the next X.Y.Z version and v-prefixed tag."
 inputs:
   current_version:
-    description: "Current semantic version (X.Y.Z or vX.Y.Z)"
+    description: "Current project version. Accepted formats: X.Y.Z or vX.Y.Z."
     required: true
   bump:
-    description: "Version bump type: patch, minor, or major"
+    description: "Requested bump strategy: patch, minor, or major."
     required: true
 outputs:
   next_version:
-    description: "Next semantic version in X.Y.Z format"
+    description: "Calculated next version in X.Y.Z format."
     value: ${{ steps.calc.outputs.next_version }}
   tag:
-    description: "Tag in vX.Y.Z format"
+    description: "Calculated release tag in vX.Y.Z format."
     value: ${{ steps.calc.outputs.tag }}
 runs:
   using: "composite"

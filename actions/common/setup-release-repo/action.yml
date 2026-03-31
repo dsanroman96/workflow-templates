@@ -1,5 +1,5 @@
 name: "Setup release repository"
-description: "Configures git bot identity"
+description: "Initial release-repo setup action that configures git identity for automated release commits."
 runs:
   using: "composite"
   steps:

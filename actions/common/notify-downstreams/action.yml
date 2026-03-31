@@ -1,22 +1,22 @@
 name: "Notify downstream repositories"
-description: "Dispatches upstream release events to configured downstream repositories"
+description: "Sends repository_dispatch events for an upstream release to each configured downstream repository."
 inputs:
   target_repos:
-    description: "Comma-separated owner/repo list"
+    description: "Comma-separated list of downstream repositories in owner/repo format."
     required: false
     default: ""
   dispatch_token:
-    description: "PAT used to dispatch to target repositories"
+    description: "GitHub token (PAT) used to call the repository dispatch API on downstream repos."
     required: false
     default: ""
   upstream_name:
-    description: "Upstream repository name"
+    description: "Name of the released upstream repository included in the dispatch payload."
     required: true
   version_tag:
-    description: "Released tag in vX.Y.Z format"
+    description: "Released upstream tag in vX.Y.Z format included in the dispatch payload."
     required: true
   open_pr:
-    description: "Whether downstream repositories should open pull requests"
+    description: "Flag forwarded to downstream automation indicating whether it should open pull requests."
     required: false
     default: "false"
 runs:

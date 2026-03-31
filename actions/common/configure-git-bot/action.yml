@@ -1,5 +1,5 @@
-name: "Configure git bot"
-description: "Configures github-actions bot identity for commits"
+name: "Configure Git Bot"
+description: "Sets git user.name and user.email to the standard GitHub Actions bot identity for automated commits."
 runs:
   using: "composite"
   steps:

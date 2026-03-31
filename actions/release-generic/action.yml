@@ -1,15 +1,15 @@
 name: "Release generic project"
-description: "Applies generic version bump and returns changed files"
+description: "Updates a plain-text version file for generic projects and reports which files changed."
 inputs:
   target_path:
-    description: "Path to generic version file"
+    description: "Path to the generic version file to overwrite (for example: VERSION)."
     required: true
   next_version:
-    description: "Next version in X.Y.Z format"
+    description: "Next release version to write, in X.Y.Z format."
     required: true
 outputs:
   changed_files:
-    description: "Files changed by this release logic"
+    description: "Space-separated file list to commit after applying generic release changes."
     value: ${{ steps.result.outputs.changed_files }}
 runs:
   using: "composite"
