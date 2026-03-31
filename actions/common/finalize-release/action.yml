@@ -36,3 +36,4 @@ runs:
         tag_name: ${{ inputs.tag }}
         name: ${{ inputs.tag }}
         body: "Automated release."
+        generate_release_notes: true
