@@ -1,4 +1,4 @@
-name: Dependency Release Template
+name: Upstream Release Template
 
 on:
   workflow_call:
@@ -16,14 +16,17 @@ on:
         required: false
         type: string
       open_pr:
-        description: "Request consumers to open PRs"
+        description: "Request downstream repositories to open PRs"
         required: false
         type: boolean
         default: false
-    secrets:
-      CONSUMER_REPOS:
+      downstream_repos:
+        description: "Comma-separated owner/repo list of downstream projects"
         required: false
-      CONSUMER_REPO_PAT:
+        type: string
+        default: ""
+    secrets:
+      DOWNSTREAM_REPO_PAT:
         required: false
 
 permissions:
@@ -78,11 +81,11 @@ jobs:
           next_version: ${{ steps.bumped.outputs.next_version }}
           tag: ${{ steps.bumped.outputs.tag }}
 
-      - name: Notify consumer repositories
-        uses: dsanroman96/workflow-templates/actions/common/notify-consumers@main
+      - name: Notify downstream repositories
+        uses: dsanroman96/workflow-templates/actions/common/notify-downstreams@main
         with:
-          target_repos: ${{ secrets.CONSUMER_REPOS }}
-          dispatch_token: ${{ secrets.CONSUMER_REPO_PAT }}
-          dependency_name: ${{ github.event.repository.name }}
+          target_repos: ${{ inputs.downstream_repos }}
+          dispatch_token: ${{ secrets.DOWNSTREAM_REPO_PAT }}
+          upstream_name: ${{ github.event.repository.name }}
           version_tag: ${{ steps.bumped.outputs.tag }}
           open_pr: ${{ inputs.open_pr }}

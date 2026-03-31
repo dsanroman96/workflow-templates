@@ -1,5 +1,5 @@
-name: "Notify consumer repositories"
-description: "Dispatches dependency release events to configured consumer repositories"
+name: "Notify downstream repositories"
+description: "Dispatches upstream release events to configured downstream repositories"
 inputs:
   target_repos:
     description: "Comma-separated owner/repo list"
@@ -9,14 +9,14 @@ inputs:
     description: "PAT used to dispatch to target repositories"
     required: false
     default: ""
-  dependency_name:
-    description: "Dependency repository name"
+  upstream_name:
+    description: "Upstream repository name"
     required: true
   version_tag:
     description: "Released tag in vX.Y.Z format"
     required: true
   open_pr:
-    description: "Whether consumers should open pull requests"
+    description: "Whether downstream repositories should open pull requests"
     required: false
     default: "false"
 runs:
@@ -27,19 +27,19 @@ runs:
       env:
         TARGET_REPOS: ${{ inputs.target_repos }}
         DISPATCH_TOKEN: ${{ inputs.dispatch_token }}
-        DEPENDENCY_NAME: ${{ inputs.dependency_name }}
+        UPSTREAM_NAME: ${{ inputs.upstream_name }}
         VERSION_TAG: ${{ inputs.version_tag }}
         OPEN_PR: ${{ inputs.open_pr }}
       run: |
         set -euo pipefail
 
         if [ -z "${TARGET_REPOS}" ] && [ -z "${DISPATCH_TOKEN}" ]; then
-          echo "No consumer notification secrets configured; skipping notifications."
+          echo "No downstream repos or dispatch token configured; skipping notifications."
           exit 0
         fi
 
         if [ -z "${TARGET_REPOS}" ] || [ -z "${DISPATCH_TOKEN}" ]; then
-          echo "Both CONSUMER_REPOS and CONSUMER_REPO_PAT are required when notifications are enabled."
+          echo "Both downstream repos and DOWNSTREAM_REPO_PAT are required when notifications are enabled."
           exit 1
         fi
 
@@ -61,10 +61,10 @@ runs:
           fi
 
           PAYLOAD="$(jq -cn \
-            --arg dep "${DEPENDENCY_NAME}" \
+            --arg upstream "${UPSTREAM_NAME}" \
             --arg ver "${VERSION_TAG}" \
             --argjson open_pr "${OPEN_PR_JSON}" \
-            '{event_type:"dependency-released",client_payload:{dependency:($dep|gsub("^\\s+|\\s+$";"")),version:($ver|gsub("^\\s+|\\s+$";"")),open_pr:$open_pr}}')"
+            '{event_type:"upstream-released",client_payload:{upstream:($upstream|gsub("^\\s+|\\s+$";"")),version:($ver|gsub("^\\s+|\\s+$";"")),open_pr:$open_pr}}')"
 
           echo "Dispatch payload for ${TARGET_REPO}: ${PAYLOAD}"
 
