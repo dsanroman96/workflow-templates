@@ -1,23 +1,20 @@
-name: "Release TypeScript project"
-description: "Updates package.json version for TypeScript projects, refreshes Bun lockfile, and reports changed files."
+name: "Release TypeScript project (npm)"
+description: "Updates package.json version, refreshes npm lockfile, and reports changed files."
 inputs:
   target_path:
-    description: "Path to the package manifest file that contains the version field (typically package.json)."
+    description: "Path to package.json."
     required: true
   next_version:
     description: "Next release version to write, in X.Y.Z format."
     required: true
 outputs:
   changed_files:
-    description: "Space-separated file list to commit after applying TypeScript release changes."
+    description: "Space-separated file list to commit after npm release changes."
     value: ${{ steps.result.outputs.changed_files }}
 runs:
   using: "composite"
   steps:
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
-
-    - name: Write next version and lockfile
+    - name: Write next version and npm lockfile
       shell: bash
       env:
         TARGET_PATH: ${{ inputs.target_path }}
@@ -25,7 +22,12 @@ runs:
       run: |
         set -euo pipefail
         TARGET_PATH="${TARGET_PATH}" NEXT_VERSION="${NEXT_VERSION}" node -e "const fs=require('fs'); const p=process.env.TARGET_PATH; const data=JSON.parse(fs.readFileSync(p,'utf8')); data.version=process.env.NEXT_VERSION; fs.writeFileSync(p, JSON.stringify(data, null, 2) + '\n');"
-        bun install --lockfile-only
+        workdir="$(dirname "${TARGET_PATH}")"
+        if [ "${workdir}" = "." ]; then
+          npm install --package-lock-only --ignore-scripts
+        else
+          (cd "${workdir}" && npm install --package-lock-only --ignore-scripts)
+        fi
 
     - id: result
       shell: bash
@@ -33,10 +35,9 @@ runs:
         TARGET_PATH: ${{ inputs.target_path }}
       run: |
         set -euo pipefail
+        workdir="$(dirname "${TARGET_PATH}")"
         files="${TARGET_PATH}"
-        if [ -f "bun.lock" ]; then
-          files="${files} bun.lock"
-        elif [ -f "bun.lockb" ]; then
-          files="${files} bun.lockb"
+        if [ -f "${workdir}/package-lock.json" ]; then
+          files="${files} ${workdir}/package-lock.json"
         fi
         echo "changed_files=${files}" >> "${GITHUB_OUTPUT}"

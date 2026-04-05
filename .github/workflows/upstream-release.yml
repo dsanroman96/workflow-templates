@@ -3,12 +3,16 @@ name: Upstream Release Template
 on:
   workflow_call:
     inputs:
-      bump:
-        description: "Version bump type"
+      next_version:
+        description: "Release version in X.Y.Z format"
         required: true
         type: string
       project_type:
         description: "Release implementation to run"
+        required: true
+        type: string
+      release_handler:
+        description: "Explicit release handler route in type/variant format (example: typescript/bun)."
         required: true
         type: string
       version_file_path:
@@ -51,35 +55,35 @@ jobs:
           project_type: ${{ inputs.project_type }}
           version_file_path: ${{ inputs.version_file_path }}
 
-      - name: Calculate bumped version
-        id: bumped
-        uses: dsanroman96/workflow-templates/actions/common/calc-next-version@main
-        with:
-          current_version: ${{ steps.version.outputs.current_version }}
-          bump: ${{ inputs.bump }}
+      - name: Resolve release metadata
+        id: release_meta
+        shell: bash
+        env:
+          NEXT_VERSION: ${{ inputs.next_version }}
+        run: |
+          set -euo pipefail
+          if [[ ! "${NEXT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "next_version must match X.Y.Z. Got: ${NEXT_VERSION}"
+            exit 1
+          fi
+          echo "next_version=${NEXT_VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "tag=v${NEXT_VERSION}" >> "${GITHUB_OUTPUT}"
 
-      - name: Apply generic release logic
-        if: ${{ inputs.project_type == 'generic' }}
-        id: generic_release
-        uses: dsanroman96/workflow-templates/actions/release-generic@main
+      - name: Apply release logic
+        id: release_logic
+        uses: dsanroman96/workflow-templates/actions/common/apply-release-logic@main
         with:
+          project_type: ${{ inputs.project_type }}
+          release_handler: ${{ inputs.release_handler }}
           target_path: ${{ steps.version.outputs.target_path }}
-          next_version: ${{ steps.bumped.outputs.next_version }}
-
-      - name: Apply TypeScript release logic
-        if: ${{ inputs.project_type == 'typescript' }}
-        id: typescript_release
-        uses: dsanroman96/workflow-templates/actions/release-typescript@main
-        with:
-          target_path: ${{ steps.version.outputs.target_path }}
-          next_version: ${{ steps.bumped.outputs.next_version }}
+          next_version: ${{ steps.release_meta.outputs.next_version }}
 
       - name: Finalize release
         uses: dsanroman96/workflow-templates/actions/common/finalize-release@main
         with:
-          changed_files: ${{ inputs.project_type == 'typescript' && steps.typescript_release.outputs.changed_files || steps.generic_release.outputs.changed_files }}
-          next_version: ${{ steps.bumped.outputs.next_version }}
-          tag: ${{ steps.bumped.outputs.tag }}
+          changed_files: ${{ steps.release_logic.outputs.changed_files }}
+          next_version: ${{ steps.release_meta.outputs.next_version }}
+          tag: ${{ steps.release_meta.outputs.tag }}
 
       - name: Notify downstream repositories
         uses: dsanroman96/workflow-templates/actions/common/notify-downstreams@main
@@ -87,5 +91,5 @@ jobs:
           target_repos: ${{ inputs.downstream_repos }}
           dispatch_token: ${{ secrets.DOWNSTREAM_REPO_PAT }}
           upstream_name: ${{ github.event.repository.name }}
-          version_tag: ${{ steps.bumped.outputs.tag }}
+          version_tag: ${{ steps.release_meta.outputs.tag }}
           open_pr: ${{ inputs.open_pr }}

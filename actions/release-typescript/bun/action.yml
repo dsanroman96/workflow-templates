@@ -1,0 +1,48 @@
+name: "Release TypeScript project (Bun)"
+description: "Updates package.json version, refreshes Bun lockfile, and reports changed files."
+inputs:
+  target_path:
+    description: "Path to package.json."
+    required: true
+  next_version:
+    description: "Next release version to write, in X.Y.Z format."
+    required: true
+outputs:
+  changed_files:
+    description: "Space-separated file list to commit after Bun release changes."
+    value: ${{ steps.result.outputs.changed_files }}
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+
+    - name: Write next version and Bun lockfile
+      shell: bash
+      env:
+        TARGET_PATH: ${{ inputs.target_path }}
+        NEXT_VERSION: ${{ inputs.next_version }}
+      run: |
+        set -euo pipefail
+        TARGET_PATH="${TARGET_PATH}" NEXT_VERSION="${NEXT_VERSION}" node -e "const fs=require('fs'); const p=process.env.TARGET_PATH; const data=JSON.parse(fs.readFileSync(p,'utf8')); data.version=process.env.NEXT_VERSION; fs.writeFileSync(p, JSON.stringify(data, null, 2) + '\n');"
+        workdir="$(dirname "${TARGET_PATH}")"
+        if [ "${workdir}" = "." ]; then
+          bun install --lockfile-only
+        else
+          (cd "${workdir}" && bun install --lockfile-only)
+        fi
+
+    - id: result
+      shell: bash
+      env:
+        TARGET_PATH: ${{ inputs.target_path }}
+      run: |
+        set -euo pipefail
+        workdir="$(dirname "${TARGET_PATH}")"
+        files="${TARGET_PATH}"
+        if [ -f "${workdir}/bun.lock" ]; then
+          files="${files} ${workdir}/bun.lock"
+        elif [ -f "${workdir}/bun.lockb" ]; then
+          files="${files} ${workdir}/bun.lockb"
+        fi
+        echo "changed_files=${files}" >> "${GITHUB_OUTPUT}"

@@ -1,0 +1,45 @@
+name: "Apply release logic by project type"
+description: "Runs release logic through a centralized dispatcher script based on project_type and returns changed files."
+inputs:
+  project_type:
+    description: "Release strategy to execute (supported: generic, typescript)."
+    required: true
+  release_handler:
+    description: "Explicit release handler route in type/variant format (example: typescript/bun)."
+    required: true
+  target_path:
+    description: "Resolved version file path to update."
+    required: true
+  next_version:
+    description: "Next release version in X.Y.Z format."
+    required: true
+outputs:
+  changed_files:
+    description: "Space-separated file list changed by the selected release implementation."
+    value: ${{ inputs.release_handler == 'generic/default' && steps.generic_release.outputs.changed_files || inputs.release_handler == 'typescript/bun' && steps.typescript_bun_release.outputs.changed_files || steps.typescript_npm_release.outputs.changed_files }}
+runs:
+  using: "composite"
+  steps:
+    - name: Apply generic release logic
+      if: ${{ inputs.release_handler == 'generic/default' }}
+      id: generic_release
+      uses: dsanroman96/workflow-templates/actions/release-generic@main
+      with:
+        target_path: ${{ inputs.target_path }}
+        next_version: ${{ inputs.next_version }}
+
+    - name: Apply TypeScript Bun release logic
+      if: ${{ inputs.release_handler == 'typescript/bun' }}
+      id: typescript_bun_release
+      uses: dsanroman96/workflow-templates/actions/release-typescript/bun@main
+      with:
+        target_path: ${{ inputs.target_path }}
+        next_version: ${{ inputs.next_version }}
+
+    - name: Apply TypeScript npm release logic
+      if: ${{ inputs.release_handler == 'typescript/npm' }}
+      id: typescript_npm_release
+      uses: dsanroman96/workflow-templates/actions/release-typescript/npm@main
+      with:
+        target_path: ${{ inputs.target_path }}
+        next_version: ${{ inputs.next_version }}
