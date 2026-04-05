@@ -7,17 +7,9 @@ on:
         description: "Release version in X.Y.Z format"
         required: true
         type: string
-      project_type:
-        description: "Release implementation to run"
-        required: true
-        type: string
       release_handler:
         description: "Explicit release handler route in type/variant format (example: typescript/bun)."
         required: true
-        type: string
-      version_file_path:
-        description: "Optional custom version file path"
-        required: false
         type: string
       open_pr:
         description: "Request downstream repositories to open PRs"
@@ -48,13 +40,6 @@ jobs:
       - name: Configure git bot
         uses: dsanroman96/workflow-templates/actions/common/configure-git-bot@main
 
-      - name: Resolve target path and current version
-        id: version
-        uses: dsanroman96/workflow-templates/actions/common/resolve-project-version@main
-        with:
-          project_type: ${{ inputs.project_type }}
-          version_file_path: ${{ inputs.version_file_path }}
-
       - name: Resolve release metadata
         id: release_meta
         shell: bash
@@ -73,9 +58,7 @@ jobs:
         id: release_logic
         uses: dsanroman96/workflow-templates/actions/common/apply-release-logic@main
         with:
-          project_type: ${{ inputs.project_type }}
           release_handler: ${{ inputs.release_handler }}
-          target_path: ${{ steps.version.outputs.target_path }}
           next_version: ${{ steps.release_meta.outputs.next_version }}
 
       - name: Finalize release

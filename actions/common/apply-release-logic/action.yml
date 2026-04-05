@@ -1,14 +1,8 @@
-name: "Apply release logic by project type"
-description: "Runs release logic through a centralized dispatcher script based on project_type and returns changed files."
+name: "Apply release logic by handler"
+description: "Runs release logic for an explicit release_handler route and returns changed files."
 inputs:
-  project_type:
-    description: "Release strategy to execute (supported: generic, typescript)."
-    required: true
   release_handler:
     description: "Explicit release handler route in type/variant format (example: typescript/bun)."
-    required: true
-  target_path:
-    description: "Resolved version file path to update."
     required: true
   next_version:
     description: "Next release version in X.Y.Z format."
@@ -25,7 +19,7 @@ runs:
       id: generic_release
       uses: dsanroman96/workflow-templates/actions/release-generic@main
       with:
-        target_path: ${{ inputs.target_path }}
+        target_path: VERSION
         next_version: ${{ inputs.next_version }}
 
     - name: Apply TypeScript Bun release logic
@@ -33,7 +27,7 @@ runs:
       id: typescript_bun_release
       uses: dsanroman96/workflow-templates/actions/release-typescript/bun@main
       with:
-        target_path: ${{ inputs.target_path }}
+        target_path: package.json
         next_version: ${{ inputs.next_version }}
 
     - name: Apply TypeScript npm release logic
@@ -41,5 +35,5 @@ runs:
       id: typescript_npm_release
       uses: dsanroman96/workflow-templates/actions/release-typescript/npm@main
       with:
-        target_path: ${{ inputs.target_path }}
+        target_path: package.json
         next_version: ${{ inputs.next_version }}
