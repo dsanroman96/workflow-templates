@@ -4,9 +4,6 @@ inputs:
   changed_files:
     description: "Space-separated list of files produced by release logic that must be committed."
     required: true
-  next_version:
-    description: "Release version in X.Y.Z format, used in the release commit message."
-    required: true
   tag:
     description: "Release tag in vX.Y.Z format to create and publish."
     required: true
@@ -17,7 +14,7 @@ runs:
       uses: dsanroman96/workflow-templates/actions/common/commit-and-push-if-changed@main
       with:
         files: ${{ inputs.changed_files }}
-        commit_message: "chore: release v${{ inputs.next_version }}"
+        commit_message: "chore: release ${{ inputs.tag }}"
         fail_when_no_changes: "true"
 
     - name: Create and push tag

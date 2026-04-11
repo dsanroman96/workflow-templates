@@ -4,8 +4,8 @@ inputs:
   release_handler:
     description: "Explicit release handler route in type/variant format (example: typescript/bun)."
     required: true
-  next_version:
-    description: "Next release version in X.Y.Z format."
+  tag:
+    description: "Release tag in vX.Y.Z format."
     required: true
 outputs:
   changed_files:
@@ -20,7 +20,7 @@ runs:
       uses: dsanroman96/workflow-templates/actions/release-generic@main
       with:
         target_path: VERSION
-        next_version: ${{ inputs.next_version }}
+        tag: ${{ inputs.tag }}
 
     - name: Apply TypeScript Bun release logic
       if: ${{ inputs.release_handler == 'typescript/bun' }}
@@ -28,7 +28,7 @@ runs:
       uses: dsanroman96/workflow-templates/actions/release-typescript/bun@main
       with:
         target_path: package.json
-        next_version: ${{ inputs.next_version }}
+        tag: ${{ inputs.tag }}
 
     - name: Apply TypeScript npm release logic
       if: ${{ inputs.release_handler == 'typescript/npm' }}
@@ -36,4 +36,4 @@ runs:
       uses: dsanroman96/workflow-templates/actions/release-typescript/npm@main
       with:
         target_path: package.json
-        next_version: ${{ inputs.next_version }}
+        tag: ${{ inputs.tag }}

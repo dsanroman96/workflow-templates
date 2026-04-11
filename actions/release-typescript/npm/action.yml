@@ -4,8 +4,8 @@ inputs:
   target_path:
     description: "Path to package.json."
     required: true
-  next_version:
-    description: "Next release version to write, in X.Y.Z format."
+  tag:
+    description: "Release tag in vX.Y.Z format."
     required: true
 outputs:
   changed_files:
@@ -18,10 +18,11 @@ runs:
       shell: bash
       env:
         TARGET_PATH: ${{ inputs.target_path }}
-        NEXT_VERSION: ${{ inputs.next_version }}
+        TAG: ${{ inputs.tag }}
       run: |
         set -euo pipefail
-        TARGET_PATH="${TARGET_PATH}" NEXT_VERSION="${NEXT_VERSION}" node -e "const fs=require('fs'); const p=process.env.TARGET_PATH; const data=JSON.parse(fs.readFileSync(p,'utf8')); data.version=process.env.NEXT_VERSION; fs.writeFileSync(p, JSON.stringify(data, null, 2) + '\n');"
+        version="${TAG#v}"
+        TARGET_PATH="${TARGET_PATH}" NEXT_VERSION="${version}" node -e "const fs=require('fs'); const p=process.env.TARGET_PATH; const data=JSON.parse(fs.readFileSync(p,'utf8')); data.version=process.env.NEXT_VERSION; fs.writeFileSync(p, JSON.stringify(data, null, 2) + '\n');"
         workdir="$(dirname "${TARGET_PATH}")"
         if [ "${workdir}" = "." ]; then
           npm install --package-lock-only --ignore-scripts

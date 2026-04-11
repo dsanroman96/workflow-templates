@@ -3,8 +3,8 @@ name: Upstream Release Template
 on:
   workflow_call:
     inputs:
-      next_version:
-        description: "Release version in X.Y.Z format"
+      tag:
+        description: "Release tag in vX.Y.Z format"
         required: true
         type: string
       release_handler:
@@ -40,33 +40,18 @@ jobs:
       - name: Configure git bot
         uses: dsanroman96/workflow-templates/actions/common/configure-git-bot@main
 
-      - name: Resolve release metadata
-        id: release_meta
-        shell: bash
-        env:
-          NEXT_VERSION: ${{ inputs.next_version }}
-        run: |
-          set -euo pipefail
-          if [[ ! "${NEXT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "next_version must match X.Y.Z. Got: ${NEXT_VERSION}"
-            exit 1
-          fi
-          echo "next_version=${NEXT_VERSION}" >> "${GITHUB_OUTPUT}"
-          echo "tag=v${NEXT_VERSION}" >> "${GITHUB_OUTPUT}"
-
       - name: Apply release logic
         id: release_logic
         uses: dsanroman96/workflow-templates/actions/common/apply-release-logic@main
         with:
           release_handler: ${{ inputs.release_handler }}
-          next_version: ${{ steps.release_meta.outputs.next_version }}
+          tag: ${{ inputs.tag }}
 
       - name: Finalize release
         uses: dsanroman96/workflow-templates/actions/common/finalize-release@main
         with:
           changed_files: ${{ steps.release_logic.outputs.changed_files }}
-          next_version: ${{ steps.release_meta.outputs.next_version }}
-          tag: ${{ steps.release_meta.outputs.tag }}
+          tag: ${{ inputs.tag }}
 
       - name: Notify downstream repositories
         uses: dsanroman96/workflow-templates/actions/common/notify-downstreams@main
@@ -74,5 +59,5 @@ jobs:
           target_repos: ${{ inputs.downstream_repos }}
           dispatch_token: ${{ secrets.DOWNSTREAM_REPO_PAT }}
           upstream_name: ${{ github.event.repository.name }}
-          version_tag: ${{ steps.release_meta.outputs.tag }}
+          version_tag: ${{ inputs.tag }}
           open_pr: ${{ inputs.open_pr }}
