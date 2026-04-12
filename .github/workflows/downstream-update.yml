@@ -3,10 +3,6 @@ name: Downstream Update Template
 on:
   workflow_call:
     inputs:
-      project_type:
-        description: "Downstream project type to update (supported: python, typescript)."
-        required: true
-        type: string
       upstream_name:
         description: "Upstream repository name received from dispatch payload."
         required: true
@@ -20,16 +16,14 @@ on:
         required: false
         type: boolean
         default: true
-      dependency_owner:
-        description: "Owner/organization of upstream dependency repositories. Defaults to current repo owner when empty."
-        required: false
-        type: string
-        default: ""
       dependency_file_path:
-        description: "Optional custom dependency file path (defaults: requirements.txt for python, package.json for typescript)."
-        required: false
+        description: "Dependency file path to update."
+        required: true
         type: string
-        default: ""
+      release_handler:
+        description: "Release handler route to apply (example: typescript/bun)."
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -45,130 +39,34 @@ jobs:
       - name: Configure git bot
         uses: dsanroman96/workflow-templates/actions/common/configure-git-bot@main
 
-      - name: Validate inputs and resolve paths
-        id: resolve
-        shell: bash
-        env:
-          PROJECT_TYPE: ${{ inputs.project_type }}
-          UPSTREAM_NAME: ${{ inputs.upstream_name }}
-          VERSION_TAG: ${{ inputs.version_tag }}
-          DEPENDENCY_OWNER: ${{ inputs.dependency_owner }}
-          DEPENDENCY_FILE_PATH: ${{ inputs.dependency_file_path }}
-          OPEN_PR: ${{ inputs.open_pr }}
-          FALLBACK_OWNER: ${{ github.repository_owner }}
-        run: |
-          set -euo pipefail
-
-          if [[ ! "${UPSTREAM_NAME}" =~ ^[a-zA-Z0-9._-]+$ ]]; then
-            echo "Invalid upstream_name: ${UPSTREAM_NAME}"
-            exit 1
-          fi
-
-          if [[ ! "${VERSION_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Invalid version_tag: ${VERSION_TAG}. Expected vX.Y.Z."
-            exit 1
-          fi
-
-          if [ -n "${DEPENDENCY_OWNER}" ]; then
-            OWNER="${DEPENDENCY_OWNER}"
-          else
-            OWNER="${FALLBACK_OWNER}"
-          fi
-
-          case "${PROJECT_TYPE}" in
-            python)
-              if [ -n "${DEPENDENCY_FILE_PATH}" ]; then
-                TARGET_PATH="${DEPENDENCY_FILE_PATH}"
-              else
-                TARGET_PATH="requirements.txt"
-              fi
-              ;;
-            typescript)
-              if [ -n "${DEPENDENCY_FILE_PATH}" ]; then
-                TARGET_PATH="${DEPENDENCY_FILE_PATH}"
-              else
-                TARGET_PATH="package.json"
-              fi
-              ;;
-            *)
-              echo "Unsupported project_type: ${PROJECT_TYPE}"
-              echo "Supported values: python, typescript"
-              exit 1
-              ;;
-          esac
-
-          if [ "${OPEN_PR}" = "true" ]; then
-            OPEN_PR_NORM="true"
-          else
-            OPEN_PR_NORM="false"
-          fi
-
-          echo "owner=${OWNER}" >> "${GITHUB_OUTPUT}"
-          echo "target_path=${TARGET_PATH}" >> "${GITHUB_OUTPUT}"
-          echo "open_pr=${OPEN_PR_NORM}" >> "${GITHUB_OUTPUT}"
-
-      - name: Apply downstream update
+      - name: Apply downstream update logic
         id: update
-        shell: bash
-        env:
-          PROJECT_TYPE: ${{ inputs.project_type }}
-          UPSTREAM_NAME: ${{ inputs.upstream_name }}
-          VERSION_TAG: ${{ inputs.version_tag }}
-          OWNER: ${{ steps.resolve.outputs.owner }}
-          TARGET_PATH: ${{ steps.resolve.outputs.target_path }}
-        run: |
-          set -euo pipefail
-
-          CHANGED="false"
-          case "${PROJECT_TYPE}" in
-            python)
-              TARGET_LINE="${UPSTREAM_NAME} @ git+https://github.com/${OWNER}/${UPSTREAM_NAME}.git@${VERSION_TAG}"
-              TMP_FILE="$(mktemp)"
-              if [ -f "${TARGET_PATH}" ]; then
-                awk -v dep="${UPSTREAM_NAME}" -v line="${TARGET_LINE}" '
-                  $0 ~ ("^" dep " @ ") { next }
-                  { print }
-                  END { print line }
-                ' "${TARGET_PATH}" > "${TMP_FILE}"
-              else
-                printf "%s\n" "${TARGET_LINE}" > "${TMP_FILE}"
-              fi
-
-              if [ -f "${TARGET_PATH}" ] && cmp -s "${TARGET_PATH}" "${TMP_FILE}"; then
-                CHANGED="false"
-                rm -f "${TMP_FILE}"
-              else
-                mv "${TMP_FILE}" "${TARGET_PATH}"
-                CHANGED="true"
-              fi
-              ;;
-            typescript)
-              TARGET_SPEC="github:${OWNER}/${UPSTREAM_NAME}#${VERSION_TAG}"
-              CHANGED="$(UPSTREAM_NAME="${UPSTREAM_NAME}" TARGET_SPEC="${TARGET_SPEC}" TARGET_PATH="${TARGET_PATH}" node -e "const fs=require('fs'); const path=process.env.TARGET_PATH; const dependency=process.env.UPSTREAM_NAME; const targetSpec=process.env.TARGET_SPEC; const pkg=JSON.parse(fs.readFileSync(path,'utf8')); pkg.dependencies=pkg.dependencies||{}; const current=pkg.dependencies[dependency]||''; if(current===targetSpec){process.stdout.write('false'); process.exit(0);} pkg.dependencies[dependency]=targetSpec; fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\\n'); process.stdout.write('true');")"
-              ;;
-          esac
-
-          echo "changed=${CHANGED}" >> "${GITHUB_OUTPUT}"
+        uses: dsanroman96/workflow-templates/actions/common/apply-release-logic@main
+        with:
+          release_handler: ${{ inputs.release_handler }}
+          dependency_name: ${{ inputs.upstream_name }}
+          target_path: ${{ inputs.dependency_file_path }}
+          tag: ${{ inputs.version_tag }}
 
       - name: Commit and push
-        if: steps.update.outputs.changed == 'true' && steps.resolve.outputs.open_pr != 'true'
+        if: steps.update.outputs.changed == 'true' && !inputs.open_pr
         shell: bash
         env:
-          TARGET_PATH: ${{ steps.resolve.outputs.target_path }}
+          CHANGED_FILES: ${{ steps.update.outputs.changed_files }}
           UPSTREAM_NAME: ${{ inputs.upstream_name }}
           VERSION_TAG: ${{ inputs.version_tag }}
         run: |
           set -euo pipefail
-          git add "${TARGET_PATH}"
+          git add ${CHANGED_FILES}
           git commit -m "chore: update ${UPSTREAM_NAME} to ${VERSION_TAG}"
           git push
 
       - name: Open pull request
-        if: steps.update.outputs.changed == 'true' && steps.resolve.outputs.open_pr == 'true'
+        if: steps.update.outputs.changed == 'true' && inputs.open_pr
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ github.token }}
-          add-paths: ${{ steps.resolve.outputs.target_path }}
+          add-paths: ${{ steps.update.outputs.changed_files }}
           commit-message: "chore: update ${{ inputs.upstream_name }} to ${{ inputs.version_tag }}"
           branch: "chore/update-${{ inputs.upstream_name }}-${{ inputs.version_tag }}"
           title: "chore: update ${{ inputs.upstream_name }} to ${{ inputs.version_tag }}"

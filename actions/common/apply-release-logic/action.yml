@@ -7,7 +7,16 @@ inputs:
   tag:
     description: "Release tag in vX.Y.Z format."
     required: true
+  dependency_name:
+    description: "Dependency name for TypeScript handlers, or self to update project version."
+    required: true
+  target_path:
+    description: "Optional target file path override."
+    required: true
 outputs:
+  changed:
+    description: "Whether tracked files changed for TypeScript handlers."
+    value: ${{ inputs.release_handler == 'typescript/bun' && steps.typescript_bun_release.outputs.changed || inputs.release_handler == 'typescript/npm' && steps.typescript_npm_release.outputs.changed || 'false' }}
   changed_files:
     description: "Space-separated file list changed by the selected release implementation."
     value: ${{ inputs.release_handler == 'generic/default' && steps.generic_release.outputs.changed_files || inputs.release_handler == 'typescript/bun' && steps.typescript_bun_release.outputs.changed_files || steps.typescript_npm_release.outputs.changed_files }}
@@ -19,7 +28,7 @@ runs:
       id: generic_release
       uses: dsanroman96/workflow-templates/actions/release-generic@main
       with:
-        target_path: VERSION
+        target_path: ${{ inputs.target_path }}
         tag: ${{ inputs.tag }}
 
     - name: Apply TypeScript Bun release logic
@@ -27,13 +36,15 @@ runs:
       id: typescript_bun_release
       uses: dsanroman96/workflow-templates/actions/release-typescript/bun@main
       with:
-        target_path: package.json
+        target_path: ${{ inputs.target_path }}
         tag: ${{ inputs.tag }}
+        dependency_name: ${{ inputs.dependency_name }}
 
     - name: Apply TypeScript npm release logic
       if: ${{ inputs.release_handler == 'typescript/npm' }}
       id: typescript_npm_release
       uses: dsanroman96/workflow-templates/actions/release-typescript/npm@main
       with:
-        target_path: package.json
+        target_path: ${{ inputs.target_path }}
         tag: ${{ inputs.tag }}
+        dependency_name: ${{ inputs.dependency_name }}

@@ -11,6 +11,10 @@ on:
         description: "Explicit release handler route in type/variant format (example: typescript/bun)."
         required: true
         type: string
+      target_path:
+        description: "Target file path handled by the selected release handler."
+        required: true
+        type: string
       open_pr:
         description: "Request downstream repositories to open PRs"
         required: false
@@ -46,6 +50,8 @@ jobs:
         with:
           release_handler: ${{ inputs.release_handler }}
           tag: ${{ inputs.tag }}
+          dependency_name: self
+          target_path: ${{ inputs.target_path }}
 
       - name: Finalize release
         uses: dsanroman96/workflow-templates/actions/common/finalize-release@main
