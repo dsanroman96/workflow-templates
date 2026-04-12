@@ -66,7 +66,6 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ github.token }}
-          add-paths: ${{ join(split(steps.update.outputs.changed_files, ' '), '\n') }}
           commit-message: "chore: update ${{ inputs.upstream_name }} to ${{ inputs.version_tag }}"
           branch: "chore/update-${{ inputs.upstream_name }}-${{ inputs.version_tag }}"
           title: "chore: update ${{ inputs.upstream_name }} to ${{ inputs.version_tag }}"
