@@ -34,9 +34,14 @@ runs:
         TAG: ${{ inputs.tag }}
       run: |
         set -euo pipefail
-        git tag "${TAG}"
-        git push origin HEAD
-        git push origin "${TAG}"
+        if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+          echo "Tag ${TAG} already exists locally; skipping tag creation."
+        elif git ls-remote --tags origin "refs/tags/${TAG}" | rg -q "refs/tags/${TAG}$"; then
+          echo "Tag ${TAG} already exists on remote; skipping tag creation."
+        else
+          git tag "${TAG}"
+          git push origin "${TAG}"
+        fi
 
     - name: Publish GitHub release
       uses: softprops/action-gh-release@v2
