@@ -48,15 +48,6 @@ jobs:
           target_path: ${{ inputs.dependency_file_path }}
           tag: ${{ inputs.version_tag }}
 
-      - name: Warn when no downstream update is applied
-        if: steps.update.outputs.changed != 'true'
-        shell: bash
-        run: |
-          echo "::warning::No downstream update applied for ${UPSTREAM_NAME} at ${VERSION_TAG}. Dependency may already be up to date or not present in the target file."
-        env:
-          UPSTREAM_NAME: ${{ inputs.upstream_name }}
-          VERSION_TAG: ${{ inputs.version_tag }}
-
       - name: Commit and push
         if: steps.update.outputs.changed == 'true' && !inputs.open_pr
         shell: bash
