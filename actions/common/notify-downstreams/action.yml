@@ -52,7 +52,7 @@ runs:
           [ -z "${TARGET_REPO}" ] && continue
 
           if [[ ! "${TARGET_REPO}" =~ ^[^/]+/[^/]+$ ]]; then
-            echo "::warning::Invalid repository format: ${TARGET_REPO}. Skipping."
+            echo "Invalid repository format: ${TARGET_REPO}. Skipping."
             had_failures=true
             failed_repos="${failed_repos}${failed_repos:+,}${TARGET_REPO}"
             continue
@@ -82,7 +82,7 @@ runs:
           echo "Dispatch to ${TARGET_REPO} returned HTTP ${HTTP_CODE}"
           if [ "${HTTP_CODE}" != "204" ]; then
             response="$(cat /tmp/dispatch_response.json)"
-            echo "::warning::Dispatch failed for ${TARGET_REPO} (HTTP ${HTTP_CODE}). Response: ${response}"
+            echo "Dispatch failed for ${TARGET_REPO} (HTTP ${HTTP_CODE}). Response: ${response}"
             had_failures=true
             failed_repos="${failed_repos}${failed_repos:+,}${TARGET_REPO}"
             continue
