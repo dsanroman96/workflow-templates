@@ -44,6 +44,7 @@ runs:
         fi
 
         had_failures=false
+        failed_repos=""
         REPO_LIST="${TARGET_REPOS}"
         REPO_LIST="$(printf '%s' "${REPO_LIST}" | tr ',' '\n')"
         while IFS= read -r TARGET_REPO; do
@@ -53,6 +54,7 @@ runs:
           if [[ ! "${TARGET_REPO}" =~ ^[^/]+/[^/]+$ ]]; then
             echo "::warning::Invalid repository format: ${TARGET_REPO}. Skipping."
             had_failures=true
+            failed_repos="${failed_repos}${failed_repos:+,}${TARGET_REPO}"
             continue
           fi
 
@@ -82,10 +84,11 @@ runs:
             response="$(cat /tmp/dispatch_response.json)"
             echo "::warning::Dispatch failed for ${TARGET_REPO} (HTTP ${HTTP_CODE}). Response: ${response}"
             had_failures=true
+            failed_repos="${failed_repos}${failed_repos:+,}${TARGET_REPO}"
             continue
           fi
         done <<< "${REPO_LIST}"
 
         if [ "${had_failures}" = "true" ]; then
-          echo "::warning::One or more downstream dispatches failed. Upstream release continues."
+          echo "::warning::Downstream dispatch failed for: ${failed_repos}. Upstream release continues."
         fi
